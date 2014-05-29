@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
+using System.Reflection;
 using StringORM.Infrastructure;
 using StringORM.Infrastructure.Enums;
 
@@ -62,12 +65,12 @@ namespace StringORM
         {
             if (sqlParameters != null)
             {
-                using (var sqlQuery = new SqlQuery(DataBase.Default, command, sqlParameters))
+                using (var sqlQuery = new SqlQuery(dataBase, command, sqlParameters))
                 {
                     return sqlQuery.GetDataReader();
                 }
             }
-            using (var sqlQuery = new SqlQuery(DataBase.Default, command))
+            using (var sqlQuery = new SqlQuery(dataBase, command))
             {
                 return sqlQuery.GetDataReader();
             }
@@ -157,12 +160,12 @@ namespace StringORM
         {
             if (sqlParameters != null)
             {
-                using (var sqlQuery = new SqlQuery(DataBase.Default, command, sqlParameters))
+                using (var sqlQuery = new SqlQuery(dataBase, command, sqlParameters))
                 {
                     return sqlQuery.GetScalar();
                 }
             }
-            using (var sqlQuery = new SqlQuery(DataBase.Default, command))
+            using (var sqlQuery = new SqlQuery(dataBase, command))
             {
                 return sqlQuery.GetScalar();
             }
@@ -198,6 +201,88 @@ namespace StringORM
         public static object GetScalar(this string command, DataBase dataBase, List<SqlParameter> sqlParameters)
         {
             return GetScalarValue(command, DataBase.Default, sqlParameters);
+        }
+
+        public static T GetObjectUsingReflection<T>(string command, DataBase dataBase, List<SqlParameter> sqlParameters) where T : new()
+        {
+            if (sqlParameters != null)
+            {
+                using (var sqlQuery = new SqlQuery(dataBase, command, sqlParameters))
+                {
+                    SqlDataReader reader = sqlQuery.GetDataReader();
+                    return SetUp<T>(reader);
+                }
+            }
+            using (var sqlQuery = new SqlQuery(dataBase, command))
+            {
+                SqlDataReader reader = sqlQuery.GetDataReader();
+                return SetUp<T>(reader);
+            }
+
+        }
+
+        public static T GetObject<T>(this string command) where T : new()
+        {
+            return GetObjectUsingReflection<T>(command, DataBase.Default, null);
+        }
+
+        public static T GetObject<T>(this string command, DataBase dataBase) where T : new()
+        {
+            return GetObjectUsingReflection<T>(command, dataBase, null);
+        }
+
+        public static T GetObject<T>(this string command, SqlParameter sqlParameter) where T : new()
+        {
+            var sqlParameters = new List<SqlParameter> {sqlParameter};
+            return GetObjectUsingReflection<T>(command, DataBase.Default, sqlParameters);
+        }
+
+        public static T GetObject<T>(this string command, DataBase dataBase, SqlParameter sqlParameter) where T : new()
+        {
+            var sqlParameters = new List<SqlParameter> { sqlParameter };
+            return GetObjectUsingReflection<T>(command, dataBase, sqlParameters);
+        }
+
+        public static T GetObject<T>(this string command, List<SqlParameter> sqlParameters) where T : new()
+        {
+            return GetObjectUsingReflection<T>(command, DataBase.Default, sqlParameters);
+        }
+
+        public static T GetObject<T>(this string command, DataBase dataBase, List<SqlParameter> sqlParameters) where T : new()
+        {
+            return GetObjectUsingReflection<T>(command, dataBase, sqlParameters);
+        }
+
+        private static T SetUp<T>(SqlDataReader reader) where T : new()
+        {
+            T obj = default(T);
+            while (reader.Read())
+            {
+                obj = Activator.CreateInstance<T>();
+                foreach (
+                    PropertyInfo prop in
+                        obj.GetType().GetProperties().Where(prop => !Equals(reader[prop.Name], DBNull.Value)))
+                {
+                    prop.SetValue(obj, reader[prop.Name], null);
+                }
+                return obj;
+            }
+            return obj;
+        }
+
+        private static List<T> SetUpList<T>(SqlDataReader reader)
+        {
+            var list = new List<T>();
+            while (reader.Read())
+            {
+                var obj = Activator.CreateInstance<T>();
+                foreach (PropertyInfo prop in obj.GetType().GetProperties().Where(prop => !Equals(reader[prop.Name], DBNull.Value)))
+                {
+                    prop.SetValue(obj, reader[prop.Name], null);
+                }
+                list.Add(obj);
+            }
+            return list;
         }
     }
 }

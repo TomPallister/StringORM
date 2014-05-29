@@ -241,15 +241,67 @@ namespace StringORM
 
 
         #region PissingAroundWithGenerics
+
         [Fact]
-        public void Awooot()
+        public void can_get_object_isnt_null_with_default_connection()
         {
-            var reader = "SELECT * FROM dbo.Names".GetDataReader();
-            reader.Should().NotBeNull();
+            var name = "SELECT * FROM dbo.Names".GetObject<List<Names>>();
+            name.Should().NotBeNull();
         }
 
+        [Fact]
+        public void can_get_object_isnt_null_with_specific_connection()
+        {
+            var name = "SELECT * FROM dbo.Names".GetObject<Names>(DataBase.Default);
+            name.Should().NotBeNull();
+        }
 
+        [Fact]
+        public void can_get_object_isnt_null_with_parameter_and_default_connection()
+        {
+            var name = "SELECT * FROM dbo.Names where Name = @Name".GetObject<Names>(new SqlParameter("@Name", "SomeName"));
+            name.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void can_get_object_isnt_null_with_parameter_and_specfific_connection()
+        {
+            var name = "SELECT * FROM dbo.Names where Name = @Name".GetObject<Names>(DataBase.Default, new SqlParameter("@Name", "SomeName"));
+            name.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void can_get_object_isnt_null_with_list_of_parameters_and_default_connection()
+        {
+            var sqlParameters = new List<SqlParameter>
+            {
+                new SqlParameter("@Name", "SomeName"),
+                new SqlParameter("@Id", 1)
+            };
+
+            var name = "SELECT * FROM dbo.Names where Name = @Name".GetObject<Names>(sqlParameters);
+            name.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void can_get_object_isnt_null_with_list_of_parameters_and_specific_connection()
+        {
+            var sqlParameters = new List<SqlParameter>
+            {
+                new SqlParameter("@Name", "SomeName"),
+                new SqlParameter("@Id", 1)
+            };
+
+            var name = "SELECT * FROM dbo.Names where Name = @Name".GetObject<Names>(DataBase.Default, sqlParameters);
+            name.Should().NotBeNull();
+        }
 
         #endregion
+    }
+
+    public class Names
+    {
+        public string Name { get; set; }
+        public int Id { get; set; }
     }
 }

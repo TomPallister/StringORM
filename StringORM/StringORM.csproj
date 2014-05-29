@@ -67,7 +67,6 @@
     <Compile Include="Infrastructure\Extensions\StringExtensions.cs" />
     <Compile Include="Infrastructure\Logging\Log4NetLogger.cs" />
     <Compile Include="Infrastructure\Logging\LoggerLevel.cs" />
-    <Compile Include="Something.cs" />
     <Compile Include="StringOrmExtensions.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

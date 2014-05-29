@@ -1,6 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 using FluentAssertions;
 using StringORM.Infrastructure.Enums;
 using Xunit;
@@ -9,61 +13,112 @@ namespace StringORM
 {
     public class Tests
     {
-        #region ReaderTests
+        #region DynamicTests
 
         [Fact]
-        public void get_reader_isnt_null_with_default_connection()
+        public void get_dynamic_isnt_null_with_default_connection()
         {
-            SqlDataReader reader = "SELECT * FROM dbo.Names".GetDataReader();
-            reader.Should().NotBeNull();
+            var dyn = "SELECT * FROM dbo.Names".GetDynamic();
         }
 
         [Fact]
-        public void get_reader_isnt_null_with_specific_connection()
+        public void get_dynamic_isnt_null_with_specific_connection()
         {
-            SqlDataReader reader = "SELECT * FROM dbo.Names".GetDataReader(DataBase.Default);
-            reader.Should().NotBeNull();
+            var dyn = "SELECT * FROM dbo.Names".GetDynamic(DataBase.Default);
         }
 
         [Fact]
-        public void get_reader_isnt_null_with_parameter_with_default_connection()
+        public void get_dynamic_isnt_null_with_parameter_with_default_connection()
         {
-            SqlDataReader reader =
-                "SELECT * FROM dbo.Names where Name = @Name".GetDataReader(new SqlParameter("@Name", "SomeNameWithId"));
-            reader.Should().NotBeNull();
+            var dyn =
+                "SELECT * FROM dbo.Names where Name = @Name".GetDynamic(new SqlParameter("@Name", "SomeNameWithId"));
         }
 
         [Fact]
-        public void get_reader_isnt_null_with_parameter_with_specific_connection()
+        public void get_dynamic_isnt_null_with_parameter_with_specific_connection()
         {
-            SqlDataReader reader = "SELECT * FROM dbo.Names where Name = @Name".GetDataReader(DataBase.Default,
+            var dyn = "SELECT * FROM dbo.Names where Name = @Name".GetDynamic(DataBase.Default,
                 new SqlParameter("@Name", "SomeNameWithId"));
-            reader.Should().NotBeNull();
         }
 
         [Fact]
-        public void get_reader_isnt_null_with_list_of_parameters_with_default_connection()
+        public void get_dynamic_isnt_null_with_list_of_parameters_with_default_connection()
         {
             var sqlParameters = new List<SqlParameter>
             {
                 new SqlParameter("@Name", "SomeNameWithId"),
                 new SqlParameter("@Id", 1)
             };
-            SqlDataReader reader = "SELECT * FROM dbo.Names where Name = @Name AND Id = @Id".GetDataReader(sqlParameters);
-            reader.Should().NotBeNull();
+            var dyn = "SELECT * FROM dbo.Names where Name = @Name AND Id = @Id".GetDynamic(sqlParameters);
         }
 
         [Fact]
-        public void get_reader_isnt_null_with_list_of_parameters_with_specific_connection()
+        public void get_dynamic_isnt_null_with_list_of_parameters_with_specific_connection()
         {
             var sqlParameters = new List<SqlParameter>
             {
                 new SqlParameter("@Name", "SomeNameWithId"),
                 new SqlParameter("@Id", 1)
             };
-            SqlDataReader reader =
-                "SELECT * FROM dbo.Names where Name = @Name AND Id = @Id".GetDataReader(DataBase.Default, sqlParameters);
-            reader.Should().NotBeNull();
+            var stopWatch = Stopwatch.StartNew();
+            var dyn =
+                "SELECT * FROM dbo.Names where Name = @Name AND Id = @Id".GetDynamic(DataBase.Default, sqlParameters);
+            stopWatch.Stop();
+            Console.WriteLine("This db call took {0} milliseconds and returned n/a objects", stopWatch.ElapsedMilliseconds);
+
+        }
+
+        [Fact]
+        public void get_dynamics_isnt_null_with_default_connection()
+        {
+            var dyn = "SELECT * FROM dbo.Names".GetDynamics();
+        }
+
+        [Fact]
+        public void get_dynamics_isnt_null_with_specific_connection()
+        {
+            var dyn = "SELECT * FROM dbo.Names".GetDynamics(DataBase.Default);
+        }
+
+        [Fact]
+        public void get_dynamics_isnt_null_with_parameter_with_default_connection()
+        {
+            var dyn =
+                "SELECT * FROM dbo.Names where Name = @Name".GetDynamics(new SqlParameter("@Name", "SomeNameWithId"));
+        }
+
+        [Fact]
+        public void get_dynamics_isnt_null_with_parameter_with_specific_connection()
+        {
+            var dyn = "SELECT * FROM dbo.Names where Name = @Name".GetDynamics(DataBase.Default,
+                new SqlParameter("@Name", "SomeNameWithId"));
+        }
+
+        [Fact]
+        public void get_dynamics_isnt_null_with_list_of_parameters_with_default_connection()
+        {
+            var sqlParameters = new List<SqlParameter>
+            {
+                new SqlParameter("@Name", "SomeNameWithId"),
+                new SqlParameter("@Id", 1)
+            };
+            var dyn = "SELECT * FROM dbo.Names where Name = @Name AND Id = @Id".GetDynamics(sqlParameters);
+        }
+
+        [Fact]
+        public void get_dynamics_isnt_null_with_list_of_parameters_with_specific_connection()
+        {
+            var sqlParameters = new List<SqlParameter>
+            {
+                new SqlParameter("@Name", "SomeNameWithId"),
+                new SqlParameter("@Id", 1)
+            };
+            var stopWatch = Stopwatch.StartNew();
+            var dyn =
+                "SELECT * FROM dbo.Names where Name = @Name AND Id = @Id".GetDynamics(DataBase.Default, sqlParameters);
+            stopWatch.Stop();
+            Console.WriteLine("This db call took {0} milliseconds and returned n/a objects", stopWatch.ElapsedMilliseconds);
+
         }
 
         #endregion
@@ -238,14 +293,12 @@ namespace StringORM
 
         #endregion
 
-
-
-        #region PissingAroundWithGenerics
+        #region ObjectReflectionTests
 
         [Fact]
         public void can_get_object_isnt_null_with_default_connection()
         {
-            var name = "SELECT * FROM dbo.Names".GetObject<List<Names>>();
+            var name = "SELECT * FROM dbo.Names".GetObject<Names>();
             name.Should().NotBeNull();
         }
 
@@ -259,14 +312,16 @@ namespace StringORM
         [Fact]
         public void can_get_object_isnt_null_with_parameter_and_default_connection()
         {
-            var name = "SELECT * FROM dbo.Names where Name = @Name".GetObject<Names>(new SqlParameter("@Name", "SomeName"));
+            var name =
+                "SELECT * FROM dbo.Names where Name = @Name".GetObject<Names>(new SqlParameter("@Name", "SomeName"));
             name.Should().NotBeNull();
         }
 
         [Fact]
         public void can_get_object_isnt_null_with_parameter_and_specfific_connection()
         {
-            var name = "SELECT * FROM dbo.Names where Name = @Name".GetObject<Names>(DataBase.Default, new SqlParameter("@Name", "SomeName"));
+            var name = "SELECT * FROM dbo.Names where Name = @Name".GetObject<Names>(DataBase.Default,
+                new SqlParameter("@Name", "SomeName"));
             name.Should().NotBeNull();
         }
 
@@ -296,12 +351,75 @@ namespace StringORM
             name.Should().NotBeNull();
         }
 
+        [Fact]
+        public void can_get_objects_isnt_null_with_default_connection()
+        {
+            List<Names> name = "SELECT * FROM dbo.Names".GetObjects<Names>();
+            name.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void can_get_objects_isnt_null_with_specific_connection()
+        {
+            List<Names> name = "SELECT * FROM dbo.Names".GetObjects<Names>(DataBase.Default);
+            name.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void can_get_objects_isnt_null_with_parameter_and_default_connection()
+        {
+            List<Names> name =
+                "SELECT * FROM dbo.Names where Name = @Name".GetObjects<Names>(new SqlParameter("@Name", "SomeName"));
+            name.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void can_get_objects_isnt_null_with_parameter_and_specfific_connection()
+        {
+            List<Names> name = "SELECT * FROM dbo.Names where Name = @Name".GetObjects<Names>(DataBase.Default,
+                new SqlParameter("@Name", "SomeName"));
+            name.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void can_get_objects_isnt_null_with_list_of_parameters_and_default_connection()
+        {
+            var sqlParameters = new List<SqlParameter>
+            {
+                new SqlParameter("@Name", "SomeName"),
+                new SqlParameter("@Id", 1)
+            };
+
+            List<Names> name = "SELECT * FROM dbo.Names where Name = @Name".GetObjects<Names>(sqlParameters);
+            name.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void can_get_objects_isnt_null_with_list_of_parameters_and_specific_connection()
+        {
+            var sqlParameters = new List<SqlParameter>
+            {
+                new SqlParameter("@Name", "SomeName"),
+                new SqlParameter("@Id", 1)
+            };
+            var stopWatch = Stopwatch.StartNew();
+            List<Names> name = "SELECT * FROM dbo.Names where Name = @Name".GetObjects<Names>(DataBase.Default,
+                sqlParameters);
+            stopWatch.Stop();
+            name.Should().NotBeNull();
+            Console.WriteLine("This db call took {0} milliseconds and returned {1} objects", stopWatch.ElapsedMilliseconds, name.Count);
+        }
+
         #endregion
     }
+
+    #region Test Class
 
     public class Names
     {
         public string Name { get; set; }
         public int Id { get; set; }
     }
+
+    #endregion
 }
